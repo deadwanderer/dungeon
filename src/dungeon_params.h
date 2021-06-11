@@ -61,5 +61,8 @@ const glm::vec3 DUNGEON_BACK_COLOR =
     glm::vec3(155.0f / 255.0f, 42.0f / 255.0f, 66.0f / 255.0f);  // cyan?
 
 const char* wall_image_paths[SurfaceType_Count] = {
-    "grass.png", "mud.png", "sand.png", "stone.png", "snow.png", "rock.png",
+    "bricks2.jpg",   "bricks2.jpg",         "brickwall.jpg",
+    "brickwall.jpg", "toy_box_diffuse.png", "wood.png",
 };
+
+// const char* wall_bump_image_

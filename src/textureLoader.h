@@ -78,7 +78,7 @@ static void fetch_callback(const sfetch_response_t* response) {
         imageDesc.width = texWidth;
         imageDesc.height = texHeight;
         imageDesc.pixel_format = SG_PIXELFORMAT_RGBA8;
-        imageDesc.min_filter = SG_FILTER_LINEAR;
+        imageDesc.min_filter = SG_FILTER_NEAREST;
         imageDesc.mag_filter = SG_FILTER_LINEAR;
         imageDesc.data.subimage[0][0].ptr = pixels;
         imageDesc.data.subimage[0][0].size = texWidth * texHeight * 4;
