@@ -1,19 +1,10 @@
-#include "glad.h"
-
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+#include "sokol_app.h"
 #include "sokol_gfx.h"
-// #pragma warning(push)
-// #pragma warning(disable : 4005)
+#include "sokol_glue.h"
 #include "sokol_time.h"
-
-#ifdef APIENTRY
-  #undef APIENTRY
-#endif
-#define GLFW_INCLUDE_NONE
-#include "glfw/glfw3.h"
-// #pragma warning(pop)
 
 #include "camera.h"
 #include "dungeon.h"
@@ -26,7 +17,6 @@ const float KeyCooldownTime = 0.15f;
 typedef struct {
   int screenWidth;
   int screenHeight;
-  GLFWwindow* window;
   sg_pass_action main_pass_action;
   Camera* camera;
   Dungeon* dungeon;
@@ -36,11 +26,12 @@ typedef struct {
   bool showWireframe;
   float lastX, lastY;
   float deltaTime, lastPress, keyCooldown;
-  double lastFrameTimestamp;
+  uint64_t lastFrameTimestamp;
 } app_state_t;
 
 static app_state_t app_state;
 
+/*
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
   int winWidth, winHeight;
   if (app_state.firstMouse) {
@@ -71,9 +62,11 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
   app_state.camera->ProcessMouseScroll((float)yoffset);
 }
+*/
 
-void processInput(app_state_t* state) {
-  state->lastPress += state->deltaTime;
+void processInput() {
+  app_state.lastPress += app_state.deltaTime;
+  /*
   if (glfwGetKey(state->window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
     glfwSetWindowShouldClose(state->window, GLFW_TRUE);
   }
@@ -109,102 +102,103 @@ void processInput(app_state_t* state) {
     }
     state->lastPress = 0.0f;
   }
+  */
 }
 
-void updateFrameTime(app_state_t* state) {
-  double currentFrameTime = glfwGetTime();
-  state->deltaTime = (float)(currentFrameTime - state->lastFrameTimestamp);
-  state->lastFrameTimestamp = currentFrameTime;
+void event(const sapp_event* e) {}
+
+void updateFrameTime() {
+  uint64_t currentFrameTime = stm_now();
+  app_state.deltaTime = (float)(stm_sec(
+      stm_diff(currentFrameTime, app_state.lastFrameTimestamp)));
+  app_state.lastFrameTimestamp = currentFrameTime;
 }
 
-void init(app_state_t* appState) {
-  glfwInit();
-  glfwWindowHint(GLFW_SAMPLES, 4);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-  appState->window =
-      glfwCreateWindow(ScreenWidth, ScreenHeight, "Dungeon", 0, 0);
-  appState->screenWidth = ScreenWidth;
-  appState->screenHeight = ScreenHeight;
-  glfwSetWindowPos(appState->window, 250, 150);
-  glfwMakeContextCurrent(appState->window);
-
-  glfwSetCursorPosCallback(appState->window, mouse_callback);
-  glfwSetScrollCallback(appState->window, scroll_callback);
-  glfwSwapInterval(1);
-  // gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
+void init() {
+  app_state.screenWidth = ScreenWidth;
+  app_state.screenHeight = ScreenHeight;
 
   sg_desc d = {0};
-  d.context.sample_count = 4;
+  d.context = sapp_sgcontext();
+  // d.context.sample_count = 4;
   sg_setup(&d);
   assert(sg_isvalid());
   stm_setup();
+  initTextureLoader();
 
   sg_pass_action pass = {0};
   pass.colors[0].action = SG_ACTION_CLEAR;
   pass.colors[0].value = sg_color{0.05f, 0.05f, 0.05f, 1.0f};
-  appState->main_pass_action = pass;
+  app_state.main_pass_action = pass;
 
-  appState->camera = new Camera(glm::vec3(2.5f, 1.5f, 3.5f));
-  appState->dungeon = new Dungeon();
-  appState->dungeon->create(generate_new_dungeon(5, 5));
+  app_state.camera = new Camera(glm::vec3(0.0f, 0.5f, 0.0f));
+  app_state.dungeon = new Dungeon();
+  app_state.dungeon->create(generate_new_dungeon(25, 25));
 
-  appState->keyCooldown = KeyCooldownTime;
-  appState->lastPress = 0.0f;
-  appState->firstMouse = true;
-  appState->lastX = 0;
-  appState->lastY = 0;
-  appState->mouseJustCaptured = false;
-  appState->showMouse = true;
-  appState->showWireframe = false;
-  appState->deltaTime = 0.0f;
-  appState->lastFrameTimestamp = glfwGetTime();
+  app_state.keyCooldown = KeyCooldownTime;
+  app_state.lastPress = 0.0f;
+  app_state.firstMouse = true;
+  app_state.lastX = 0;
+  app_state.lastY = 0;
+  app_state.mouseJustCaptured = false;
+  app_state.showMouse = true;
+  app_state.showWireframe = false;
+  app_state.deltaTime = 0.0f;
+  app_state.lastFrameTimestamp = stm_now();
 }
 
-void update(app_state_t* state) {
-  updateFrameTime(state);
-  processInput(state);
+void update() {
+  updateFrameTime();
+  processInput();
+  texturePump();
 }
 
-void render(app_state_t* state) {
-  int currWidth, currHeight;
-  glfwGetFramebufferSize(state->window, &currWidth, &currHeight);
-  if (currWidth != state->screenWidth || currHeight != state->screenHeight) {
-    state->screenWidth = currWidth;
-    state->screenHeight = currHeight;
+void render() {
+  int currWidth = sapp_width();
+  int currHeight = sapp_height();
+  if (currWidth != app_state.screenWidth ||
+      currHeight != app_state.screenHeight) {
+    app_state.screenWidth = currWidth;
+    app_state.screenHeight = currHeight;
   }
 
   float aspectRatio =
       static_cast<float>(currWidth) / static_cast<float>(currHeight);
-  glm::mat4 projection = glm::perspective(glm::radians(state->camera->Zoom),
+  glm::mat4 projection = glm::perspective(glm::radians(app_state.camera->Zoom),
                                           aspectRatio, 0.1f, 100.0f);
-  glm::mat4 viewproj = projection * state->camera->GetViewMatrix();
+  glm::mat4 viewproj = projection * app_state.camera->GetViewMatrix();
 
-  sg_begin_default_pass(&state->main_pass_action, currWidth, currHeight);
-  state->dungeon->render(viewproj);
+  sg_begin_default_pass(&app_state.main_pass_action, currWidth, currHeight);
+  app_state.dungeon->render(viewproj);
   sg_end_pass();
   sg_commit();
-  glfwSwapBuffers(state->window);
-  glfwPollEvents();
+  // glfwSwapBuffers(state->window);
+  // glfwPollEvents();
 }
 
-void cleanup(app_state_t* state) {
-  delete state->camera;
-  delete state->dungeon;
+void cleanup() {
+  delete app_state.camera;
+  delete app_state.dungeon;
+  destroyTextureLoader();
   sg_shutdown();
-  glfwDestroyWindow(state->window);
-  glfwTerminate();
 }
 
-void main() {
-  init(&app_state);
-  while (!glfwWindowShouldClose(app_state.window)) {
-    update(&app_state);
-    render(&app_state);
-  }
+void frame() {
+  update();
+  render();
+}
 
-  cleanup(&app_state);
+sapp_desc sokol_main(int argc, char* argv[]) {
+  sapp_desc desc = {0};
+  desc.init_cb = init;
+  desc.frame_cb = frame;
+  desc.cleanup_cb = cleanup;
+  desc.event_cb = event;
+  desc.width = ScreenWidth;
+  desc.height = ScreenHeight;
+  desc.gl_force_gles2 = false;
+  desc.sample_count = 4;
+  desc.window_title = "DungeonCrawl";
+  desc.icon.sokol_default = true;
+  return desc;
 }
