@@ -2,7 +2,7 @@
 
 #include "sokol_gfx.h"
 #include "textureLoader.h"
-#include "shaders.glsl.h"
+#include "light_shaders.glsl.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "dungeon_surface.h"
@@ -58,6 +58,8 @@ class DungeonSurfaceRenderer {
     wall_bind.fs_images[SLOT_surfaceTex] = wall_images[type];
     sg_apply_bindings(&wall_bind);
   }
+
+  void update_light() {}
 
   void render_surface(DungeonSurface& surf) {
     vs_params.model = surf.model;

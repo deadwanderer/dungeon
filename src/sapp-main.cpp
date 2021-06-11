@@ -6,7 +6,7 @@
 #include "sokol_glue.h"
 #include "sokol_time.h"
 
-#include "camera.h"
+#include "dungeon_camera.h"
 #include "dungeon.h"
 #include "dungeon_generator.h"
 
@@ -24,6 +24,7 @@ typedef struct {
   bool showMouse;
   bool mouseJustCaptured;
   bool showWireframe;
+  bool freeLook;
   float lastX, lastY;
   float deltaTime, lastPress, keyCooldown;
   uint64_t lastFrameTimestamp;
@@ -31,87 +32,63 @@ typedef struct {
 
 static app_state_t app_state;
 
-/*
-void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
-  int winWidth, winHeight;
-  if (app_state.firstMouse) {
-    glfwGetWindowSize(window, &winWidth, &winHeight);
-    app_state.lastX = winWidth / 2.0f;
-    app_state.lastY = winHeight / 2.0f;
-    glfwSetCursorPos(window, app_state.lastX, app_state.lastY);
-    app_state.firstMouse = false;
-  }
-
-  float xoffset = (float)xpos - app_state.lastX;
-  float yoffset = app_state.lastY - (float)ypos;
-
-  if (app_state.mouseJustCaptured && !app_state.showMouse) {
-    glfwGetWindowSize(window, &winWidth, &winHeight);
-    glfwSetCursorPos(window, winWidth / 2.0f, winHeight / 2.0f);
-    xoffset = 0.0f;
-    yoffset = 0.0f;
-    app_state.mouseJustCaptured = false;
-  }
-
-  if (!app_state.showMouse) {
-    app_state.camera->ProcessMouseMovement(xoffset, yoffset);
-    glfwSetCursorPos(window, app_state.lastX, app_state.lastY);
-  }
-}
-
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
-  app_state.camera->ProcessMouseScroll((float)yoffset);
-}
-*/
-
-void processInput() {
-  app_state.lastPress += app_state.deltaTime;
-  /*
-  if (glfwGetKey(state->window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-    glfwSetWindowShouldClose(state->window, GLFW_TRUE);
-  }
-
-  if (glfwGetKey(state->window, GLFW_KEY_W) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(FORWARD, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_S) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(BACKWARD, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_A) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(LEFT, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_D) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(RIGHT, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(UP, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-    state->camera->ProcessKeyboard(DOWN, state->deltaTime);
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_G) == GLFW_PRESS &&
-      state->lastPress >= state->keyCooldown) {
-    state->showWireframe = !state->showWireframe;
-    state->lastPress = 0.0f;
-  }
-  if (glfwGetKey(state->window, GLFW_KEY_F) == GLFW_PRESS &&
-      state->lastPress >= state->keyCooldown) {
-    state->showMouse = !state->showMouse;
-    if (!state->showMouse) {
-      state->mouseJustCaptured = true;
+void event(const sapp_event* e) {
+  switch (e->type) {
+    case SAPP_EVENTTYPE_KEY_DOWN: {
+      switch (e->key_code) {
+        case SAPP_KEYCODE_W: {
+          app_state.camera->ProcessKeyboardMovement(MOVE_FORWARD,
+                                                    app_state.deltaTime);
+        } break;
+        case SAPP_KEYCODE_S: {
+          app_state.camera->ProcessKeyboardMovement(MOVE_BACKWARD,
+                                                    app_state.deltaTime);
+        } break;
+        case SAPP_KEYCODE_A: {
+          app_state.camera->ProcessKeyboardMovement(MOVE_LEFT,
+                                                    app_state.deltaTime);
+        } break;
+        case SAPP_KEYCODE_D: {
+          app_state.camera->ProcessKeyboardMovement(MOVE_RIGHT,
+                                                    app_state.deltaTime);
+        } break;
+        case SAPP_KEYCODE_Q: {
+          if (app_state.lastPress > app_state.keyCooldown) {
+            app_state.camera->ProcessKeyboardRotation(TURN_LEFT,
+                                                      app_state.deltaTime);
+          }
+        } break;
+        case SAPP_KEYCODE_E: {
+          if (app_state.lastPress > app_state.keyCooldown) {
+            app_state.camera->ProcessKeyboardRotation(TURN_RIGHT,
+                                                      app_state.deltaTime);
+          }
+        } break;
+        case SAPP_KEYCODE_ESCAPE: {
+          sapp_request_quit();
+        } break;
+      }
+    } break;
+    case SAPP_EVENTTYPE_MOUSE_DOWN: {
+      if (e->mouse_button == SAPP_MOUSEBUTTON_RIGHT) {
+        app_state.freeLook = true;
+      }
     }
-    state->lastPress = 0.0f;
+    case SAPP_EVENTTYPE_MOUSE_UP: {
+      if (e->mouse_button == SAPP_MOUSEBUTTON_RIGHT) {
+        app_state.freeLook = false;
+      }
+    }
   }
-  */
 }
-
-void event(const sapp_event* e) {}
 
 void updateFrameTime() {
   uint64_t currentFrameTime = stm_now();
   app_state.deltaTime = (float)(stm_sec(
       stm_diff(currentFrameTime, app_state.lastFrameTimestamp)));
   app_state.lastFrameTimestamp = currentFrameTime;
+
+  app_state.lastPress += app_state.deltaTime;
 }
 
 void init() {
@@ -120,7 +97,6 @@ void init() {
 
   sg_desc d = {0};
   d.context = sapp_sgcontext();
-  // d.context.sample_count = 4;
   sg_setup(&d);
   assert(sg_isvalid());
   stm_setup();
@@ -144,12 +120,12 @@ void init() {
   app_state.showMouse = true;
   app_state.showWireframe = false;
   app_state.deltaTime = 0.0f;
+  app_state.freeLook = false;
   app_state.lastFrameTimestamp = stm_now();
 }
 
 void update() {
   updateFrameTime();
-  processInput();
   texturePump();
 }
 

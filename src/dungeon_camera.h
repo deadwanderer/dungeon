@@ -3,7 +3,29 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-enum Camera_Movement { FORWARD, BACKWARD, LEFT, RIGHT, UP, DOWN };
+enum Camera_Movement {
+  MOVE_FORWARD,
+  MOVE_BACKWARD,
+  MOVE_LEFT,
+  MOVE_RIGHT,
+  MOVE_UP,
+  MOVE_DOWN
+};
+
+enum Facing_Direction {
+  FACING_FRONT = 0,
+  FACING_RIGHT,
+  FACING_BACK,
+  FACING_LEFT
+};
+
+const glm::vec3 _movements[4] = {
+    glm::vec3(2.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 2.0f),
+    glm::vec3(-2.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, -2.0f)};
+
+enum Camera_Rotation { TURN_RIGHT, TURN_LEFT };
+
+const float _rotations[4] = {0.0f, 90.0f, 180.0f, 270.0f};
 
 const float YAW = 0.0f;
 const float PITCH = 0.0f;
@@ -36,6 +58,7 @@ class Camera {
     WorldUp = up;
     Yaw = yaw;
     Pitch = pitch;
+    rotationIndex = 0;
     updateCameraVectors();
   }
 
@@ -55,6 +78,7 @@ class Camera {
     WorldUp = glm::vec3(upX, upY, upZ);
     Yaw = yaw;
     Pitch = pitch;
+    rotationIndex = 0;
     updateCameraVectors();
   }
 
@@ -62,26 +86,46 @@ class Camera {
     return glm::lookAt(Position, Position + Front, Up);
   }
 
-  void ProcessKeyboard(Camera_Movement direction, float deltaTime) {
+  void ProcessKeyboardMovement(Camera_Movement direction, float deltaTime) {
     float velocity = MovementSpeed * deltaTime;
-    if (direction == FORWARD) {
-      Position += Front * velocity;
+    if (direction == MOVE_FORWARD) {
+      Position += Front + _movements[rotationIndex];
+      // Position += Front * velocity;
     }
-    if (direction == BACKWARD) {
-      Position -= Front * velocity;
+    if (direction == MOVE_BACKWARD) {
+      Position -= Front + _movements[rotationIndex];
+      // Position -= Front * velocity;
     }
-    if (direction == LEFT) {
-      Position -= Right * velocity;
+    if (direction == MOVE_LEFT) {
+      Position -= Right + _movements[(rotationIndex + 1) % 4];
+      // Position -= Right * velocity;
     }
-    if (direction == RIGHT) {
-      Position += Right * velocity;
+    if (direction == MOVE_RIGHT) {
+      Position += Right + _movements[(rotationIndex + 1) % 4];
+      // Position += Right * velocity;
     }
-    if (direction == UP) {
-      Position += Up * velocity;
+    // if (direction == MOVE_UP) {
+    //   Position += Up * velocity;
+    // }
+    // if (direction == MOVE_DOWN) {
+    //   Position -= Up * velocity;
+    // }
+  }
+
+  void ProcessKeyboardRotation(Camera_Rotation rotation, float deltaTime) {
+    if (rotation == TURN_RIGHT) {
+      rotationIndex++;
+      if (rotationIndex >= 4) {
+        rotationIndex = 0;
+      }
     }
-    if (direction == DOWN) {
-      Position -= Up * velocity;
+    if (rotation == TURN_LEFT) {
+      rotationIndex--;
+      if (rotationIndex < 0) {
+        rotationIndex = 3;
+      }
     }
+    updateCameraVectors();
   }
 
   void ProcessMouseMovement(float xoffset,
@@ -117,11 +161,15 @@ class Camera {
  private:
   void updateCameraVectors() {
     glm::vec3 front;
-    front.x = cos(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    front.x =
+        cos(glm::radians(_rotations[rotationIndex])) * cos(glm::radians(Pitch));
     front.y = sin(glm::radians(Pitch));
-    front.z = sin(glm::radians(Yaw)) * cos(glm::radians(Pitch));
+    front.z =
+        sin(glm::radians(_rotations[rotationIndex])) * cos(glm::radians(Pitch));
     Front = glm::normalize(front);
     Right = glm::normalize(glm::cross(Front, WorldUp));
     Up = glm::normalize(glm::cross(Right, Front));
   }
+
+  int rotationIndex;
 };
