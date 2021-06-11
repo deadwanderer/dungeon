@@ -3,6 +3,16 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
+enum SurfaceType {
+  SurfaceType_Left = 0,
+  SurfaceType_Right,
+  SurfaceType_Front,
+  SurfaceType_Back,
+  SurfaceType_Top,
+  SurfaceType_Bottom,
+  SurfaceType_Count
+};
+
 const float DUNGEON_TILE_WIDTH = 2.0f;
 const float DUNGEON_TILE_WIDTH_OFFSET = DUNGEON_TILE_WIDTH / 2.0f;
 const float DUNGEON_TILE_LENGTH = 2.0f;
@@ -49,3 +59,7 @@ const glm::vec3 DUNGEON_FRONT_COLOR =
     glm::vec3(66.0f / 255.0f, 42.0f / 255.0f, 155.0f / 255.0f);  // purple
 const glm::vec3 DUNGEON_BACK_COLOR =
     glm::vec3(155.0f / 255.0f, 42.0f / 255.0f, 66.0f / 255.0f);  // cyan?
+
+const char* wall_image_paths[SurfaceType_Count] = {
+    "grass.png", "mud.png", "sand.png", "stone.png", "snow.png", "rock.png",
+};

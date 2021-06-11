@@ -27,10 +27,12 @@ void main() {
 in vec2 out_texcoord;
 in vec3 out_color;
 
+uniform sampler2D surfaceTex;
+
 out vec4 frag_color;
 
 void main() {
-  frag_color = vec4(out_color, 1.0);
+  frag_color = texture(surfaceTex, out_texcoord);// * vec4(out_color, 0.5);
 }
 @end
 

@@ -1,10 +1,12 @@
 #pragma once
 
 #include "sokol_gfx.h"
+#include "textureLoader.h"
 #include "shaders.glsl.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "dungeon_surface.h"
+#include "dungeon_params.h"
 
 class DungeonSurfaceRenderer {
  public:
@@ -40,13 +42,21 @@ class DungeonSurfaceRenderer {
     buf_desc.data = SG_RANGE(indices);
     wall_bind.index_buffer = sg_make_buffer(&buf_desc);
     vs_params = {};
+    for (uint32_t i = 0; i < SurfaceType_Count; i++) {
+      wall_images[i] = sg_alloc_image();
+      loadTexture(wall_image_paths[i], wall_images[i], SLOT_surfaceTex);
+    }
   }
 
   void begin_render(glm::mat4 viewproj) {
     sg_apply_pipeline(wall_pip);
-    sg_apply_bindings(&wall_bind);
 
     vs_params.viewproj = viewproj;
+  }
+
+  void apply_textures(SurfaceType type) {
+    wall_bind.fs_images[SLOT_surfaceTex] = wall_images[type];
+    sg_apply_bindings(&wall_bind);
   }
 
   void render_surface(DungeonSurface& surf) {
@@ -61,5 +71,6 @@ class DungeonSurfaceRenderer {
  private:
   sg_pipeline wall_pip;
   sg_bindings wall_bind;
+  sg_image wall_images[SurfaceType_Count];
   surface_vs_params_t vs_params;
 };

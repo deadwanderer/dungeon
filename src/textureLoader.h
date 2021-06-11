@@ -1,9 +1,5 @@
 #ifndef _TEXTURE_LOADER_H_
 #define _TEXTURE_LOADER_H_
-
-#define STBI_ONLY_JPEG
-#define STBI_ONLY_PNG
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #include "sokol_fetch.h"
@@ -15,7 +11,7 @@ uint8_t fileBuffer[NUM_CHANNELS][NUM_LANES][MAX_FILE_SIZE];
 
 typedef struct {
   sfetch_handle_t handle;
-  sg_bindings* binding;
+  sg_image imgLoc;
   int slotId;
   int requestId;
 } request_t;
@@ -27,9 +23,9 @@ static int requestsMade = 0;
 static void fetch_callback(const sfetch_response_t* response);
 
 static void initTextureLoader(void) {
-  for (int i = 0; i < NUM_REQUESTS; i++) {
-    requests[i].binding = 0;
-  }
+  // for (int i = 0; i < NUM_REQUESTS; i++) {
+  //   requests[i].imgLoc = 0;
+  // }
   sfetch_desc_t fetchDesc = {0};
   fetchDesc.num_channels = NUM_CHANNELS;
   fetchDesc.num_lanes = NUM_LANES;
@@ -40,13 +36,13 @@ static void destroyTextureLoader(void) {
   sfetch_shutdown();
 }
 
-static void loadTexture(const char* fileName, sg_bindings* bindLoc, int slot) {
+static void loadTexture(const char* fileName, sg_image imgLoc, int slot) {
   if (requestsMade >= NUM_REQUESTS) {
     return;
   }
   requests[requestsMade].slotId = slot;
   requests[requestsMade].requestId = requestsMade;
-  requests[requestsMade].binding = bindLoc;
+  requests[requestsMade].imgLoc = imgLoc;
 
   sfetch_request_t fetchRequest = {0};
   fetchRequest.path = fileName;
@@ -84,11 +80,9 @@ static void fetch_callback(const sfetch_response_t* response) {
         imageDesc.pixel_format = SG_PIXELFORMAT_RGBA8;
         imageDesc.min_filter = SG_FILTER_LINEAR;
         imageDesc.mag_filter = SG_FILTER_LINEAR;
-        imageDesc.content.subimage[0][0].ptr = pixels;
-        imageDesc.content.subimage[0][0].size = texWidth * texHeight * 4;
-        sg_init_image(
-            requests[index].binding->fs_images[requests[index].slotId],
-            &imageDesc);
+        imageDesc.data.subimage[0][0].ptr = pixels;
+        imageDesc.data.subimage[0][0].size = texWidth * texHeight * 4;
+        sg_init_image(requests[index].imgLoc, &imageDesc);
         stbi_image_free(pixels);
       }
     }

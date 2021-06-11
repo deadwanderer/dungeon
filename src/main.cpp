@@ -7,6 +7,7 @@
 // #pragma warning(push)
 // #pragma warning(disable : 4005)
 #include "sokol_time.h"
+#include "textureLoader.h"
 
 #ifdef APIENTRY
   #undef APIENTRY
@@ -143,6 +144,8 @@ void init(app_state_t* appState) {
   assert(sg_isvalid());
   stm_setup();
 
+  initTextureLoader();
+
   sg_pass_action pass = {0};
   pass.colors[0].action = SG_ACTION_CLEAR;
   pass.colors[0].value = sg_color{0.05f, 0.05f, 0.05f, 1.0f};
@@ -167,6 +170,7 @@ void init(app_state_t* appState) {
 void update(app_state_t* state) {
   updateFrameTime(state);
   processInput(state);
+  texturePump();
 }
 
 void render(app_state_t* state) {
@@ -194,6 +198,7 @@ void render(app_state_t* state) {
 void cleanup(app_state_t* state) {
   delete state->camera;
   delete state->dungeon;
+  destroyTextureLoader();
   sg_shutdown();
   glfwDestroyWindow(state->window);
   glfwTerminate();

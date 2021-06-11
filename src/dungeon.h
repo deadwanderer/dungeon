@@ -119,32 +119,64 @@ class Dungeon {
           continue;
         else {
           if (!tile_has_left_neighbor(_layout, x, z)) {
-            surfaces.push_back(create_left_surface(x, z));
+            left_surfaces.push_back(create_left_surface(x, z));
           }
           if (!tile_has_right_neighbor(_layout, x, z)) {
-            surfaces.push_back(create_right_surface(x, z));
+            right_surfaces.push_back(create_right_surface(x, z));
           }
           if (!tile_has_front_neighbor(_layout, x, z)) {
-            surfaces.push_back(create_front_surface(x, z));
+            front_surfaces.push_back(create_front_surface(x, z));
           }
           if (!tile_has_back_neighbor(_layout, x, z)) {
-            surfaces.push_back(create_back_surface(x, z));
+            back_surfaces.push_back(create_back_surface(x, z));
           }
-          surfaces.push_back(create_top_surface(x, z));
-          surfaces.push_back(create_bottom_surface(x, z));
+          top_surfaces.push_back(create_top_surface(x, z));
+          bottom_surfaces.push_back(create_bottom_surface(x, z));
         }
       }
     }
   }
   void render(const glm::mat4 viewproj) {
     renderer->begin_render(viewproj);
-    for (auto& surf : surfaces) {
+
+    renderer->apply_textures(SurfaceType_Left);
+    for (auto& surf : left_surfaces) {
+      renderer->render_surface(surf);
+    }
+
+    renderer->apply_textures(SurfaceType_Right);
+    for (auto& surf : right_surfaces) {
+      renderer->render_surface(surf);
+    }
+
+    renderer->apply_textures(SurfaceType_Front);
+    for (auto& surf : front_surfaces) {
+      renderer->render_surface(surf);
+    }
+
+    renderer->apply_textures(SurfaceType_Back);
+    for (auto& surf : back_surfaces) {
+      renderer->render_surface(surf);
+    }
+
+    renderer->apply_textures(SurfaceType_Top);
+    for (auto& surf : top_surfaces) {
+      renderer->render_surface(surf);
+    }
+
+    renderer->apply_textures(SurfaceType_Bottom);
+    for (auto& surf : bottom_surfaces) {
       renderer->render_surface(surf);
     }
   }
 
  private:
   uint32_t dungeonWidth, dungeonLength;
-  std::vector<DungeonSurface> surfaces;
+  std::vector<DungeonSurface> left_surfaces;
+  std::vector<DungeonSurface> right_surfaces;
+  std::vector<DungeonSurface> front_surfaces;
+  std::vector<DungeonSurface> back_surfaces;
+  std::vector<DungeonSurface> bottom_surfaces;
+  std::vector<DungeonSurface> top_surfaces;
   DungeonSurfaceRenderer* renderer;
 };
